@@ -2,12 +2,12 @@
 
 You can find more details here: https://li-chongyi.github.io/Proj_Zero-DCE.html. Have fun!
 
-**The implementation of Zero-DCE is for non-commercial use only.**
+**The implementation of Zero-3DCE is for non-commercial use only.**
 
 We also provide a MindSpore version of our code: https://pan.baidu.com/s/1uyLBEBdbb1X4QVe2waog_g (passwords: of5l).
 
 # Pytorch 
-Pytorch implementation of Zero-DCE
+Pytorch implementation of Zero-3DCE
 
 ## Requirements
 1. Python 3.7 
@@ -16,13 +16,13 @@ Pytorch implementation of Zero-DCE
 4. torchvision 0.2.1
 5. cuda 10.0
 
-Zero-DCE does not need special configurations. Just basic environment. 
+Zero-3DCE does not need special configurations. Just basic environment. 
 
 Or you can create a conda environment to run our code like this:
-conda create --name zerodce_env opencv pytorch==1.0.0 torchvision==0.2.1 cuda100 python=3.7 -c pytorch
+conda create --name zero3dce_env opencv pytorch==1.0.0 torchvision==0.2.1 cuda100 python=3.7 -c pytorch
 
 ### Folder structure
-Download the Zero-DCE_code first.
+Download the Zero-3DCE_code first.
 The following shows the basic folder structure.
 ```
 
@@ -34,21 +34,21 @@ The following shows the basic folder structure.
 │   └── train_data 
 ├── lowlight_test.py # testing code
 ├── lowlight_train.py # training code
-├── model.py # Zero-DEC network
+├── model.py # Zero-3DCE network
 ├── dataloader.py
 ├── snapshots
 │   ├── Epoch99.pth #  A pre-trained snapshot (Epoch99.pth)
 ```
 ### Test: 
 
-cd Zero-DCE_code
+cd Zero-3DCE_code
 ```
 python lowlight_test.py 
 ```
 The script will process the images in the sub-folders of "test_data" folder and make a new folder "result" in the "data". You can find the enhanced images in the "result" folder.
 
 ### Train: 
-1) cd Zero-DCE_code
+1) cd Zero-3DCE_code
 
 2) download the training data <a href="https://drive.google.com/file/d/1GAB3uGsmAyLgtDBDONbil08vVu5wJcG3/view?usp=sharing">google drive</a> or <a href="https://pan.baidu.com/s/11-u_FZkJ8OgbqcG6763XyA">baidu cloud [password: 1234]</a>
 
@@ -63,7 +63,7 @@ The code is made available for academic research purpose only. Under Attribution
 ## Bibtex
 
 ```
-@inproceedings{Zero-DCE,
+@inproceedings{Zero-3DCE,
  author = {Guo, Chunle Guo and Li, Chongyi and Guo, Jichang and Loy, Chen Change and Hou, Junhui and Kwong, Sam and Cong, Runmin},
  title = {Zero-reference deep curve estimation for low-light image enhancement},
  booktitle = {Proceedings of the IEEE conference on computer vision and pattern recognition (CVPR)},
@@ -80,4 +80,4 @@ If you have any questions, please contact Chongyi Li at lichongyi25@gmail.com or
 
 ## TensorFlow Version 
 Thanks tuvovan (vovantu.hust@gmail.com) who re-produces our code by TF. The results of TF version look similar with our Pytorch version. But I do not have enough time to check the details.
-https://github.com/tuvovan/Zero_DCE_TF
+https://github.com/tuvovan/Zero_3DCE_TF
