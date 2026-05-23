@@ -19,7 +19,7 @@ def weights_init(m):
 def train(config):
 	device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-	net = model.Zero3DCE(clip_len=config.clip_len).to(device)
+	net = model.Zero3DCE().to(device)
 	net.apply(weights_init)
 
 	if config.load_pretrain:
@@ -40,6 +40,8 @@ def train(config):
 	L_temporal = Myloss.L_temporal()
 	L_sharp    = Myloss.L_sharp()
 	L_contrast = Myloss.L_contrast()
+	L_msssim   = Myloss.L_MSSSIM()
+	L_edge     = Myloss.L_edge()
 
 	optimizer = torch.optim.Adam(net.parameters(), lr=config.lr, weight_decay=config.weight_decay)
 	net.train()
@@ -62,8 +64,10 @@ def train(config):
 				+ 5   * torch.mean(L_color(enh_2d))
 				+ 10  * torch.mean(L_exp(enh_2d))
 				+ 20  * L_temporal(enhanced)
-				+ 8   * L_sharp(enh_2d, clip_2d)       # preserve/enhance edges
-				+ 4   * L_contrast(enh_2d))             # boost local contrast
+				+ 8   * L_sharp(enh_2d, clip_2d)
+				+ 4   * L_contrast(enh_2d)
+				+ 10  * L_msssim(enh_2d, clip_2d)      # structural preservation (MS-SSIM)
+				+ 6   * L_edge(enh_2d, clip_2d))        # edge fidelity (Laplacian)
 
 			optimizer.zero_grad()
 			loss.backward()

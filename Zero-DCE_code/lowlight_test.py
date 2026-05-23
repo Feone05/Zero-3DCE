@@ -69,7 +69,7 @@ def enhance_sequence(frame_paths, out_dir, net, device):
 if __name__ == '__main__':
 	device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-	net = model.Zero3DCE(clip_len=CLIP_LEN).to(device)
+	net = model.Zero3DCE().to(device)
 	net.load_state_dict(torch.load('snapshots/Epoch99_3dce_video.pth', map_location=device))
 	net.eval()
 

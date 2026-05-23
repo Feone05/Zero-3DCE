@@ -137,3 +137,63 @@ class L_contrast(nn.Module):
         mean     = enhanced.mean(dim=[2, 3], keepdim=True)
         variance = torch.pow(enhanced - mean, 2).mean()
         return -variance   # negate: minimising this maximises contrast
+
+
+class L_MSSSIM(nn.Module):
+    """
+    Multi-Scale SSIM loss as used in Zero-3DCE (Tatana et al. 2025).
+    Measures structural similarity at 3 scales; 1 - MS-SSIM gives a loss
+    that penalises blur and structural distortion caused by brightening.
+    No external dependencies — SSIM computed with avg-pool approximation.
+    """
+    def __init__(self, scales=3, window_size=11):
+        super(L_MSSSIM, self).__init__()
+        self.scales      = scales
+        self.window_size = window_size
+        self.C1 = 0.01 ** 2
+        self.C2 = 0.03 ** 2
+
+    def _ssim(self, x, y):
+        pad = self.window_size // 2
+        k   = self.window_size
+        mu_x  = F.avg_pool2d(x,   k, stride=1, padding=pad)
+        mu_y  = F.avg_pool2d(y,   k, stride=1, padding=pad)
+        mu_x2 = mu_x ** 2
+        mu_y2 = mu_y ** 2
+        mu_xy = mu_x * mu_y
+        sx  = F.avg_pool2d(x*x, k, stride=1, padding=pad) - mu_x2
+        sy  = F.avg_pool2d(y*y, k, stride=1, padding=pad) - mu_y2
+        sxy = F.avg_pool2d(x*y, k, stride=1, padding=pad) - mu_xy
+        num = (2*mu_xy + self.C1) * (2*sxy + self.C2)
+        den = (mu_x2 + mu_y2 + self.C1) * (sx + sy + self.C2)
+        return (num / den).mean()
+
+    def forward(self, enhanced, original):
+        # enhanced, original: (B, 3, H, W)
+        loss = 0.0
+        x, y = enhanced, original
+        for _ in range(self.scales):
+            loss += 1.0 - self._ssim(x, y)
+            x = F.avg_pool2d(x, 2)
+            y = F.avg_pool2d(y, 2)
+        return loss / self.scales
+
+
+class L_edge(nn.Module):
+    """
+    Laplacian edge loss as used in Zero-3DCE (Tatana et al. 2025).
+    Penalises differences in edge maps between enhanced and original,
+    preserving structural detail critical for object detection.
+    """
+    def __init__(self):
+        super(L_edge, self).__init__()
+        kernel = torch.FloatTensor([[0,1,0],[1,-4,1],[0,1,0]]).view(1,1,3,3)
+        self.register_buffer('laplacian', kernel)
+
+    def forward(self, enhanced, original):
+        # enhanced, original: (B, 3, H, W)
+        enh_lum = enhanced.mean(dim=1, keepdim=True)
+        org_lum = original.mean(dim=1, keepdim=True)
+        enh_edge = F.conv2d(enh_lum, self.laplacian, padding=1)
+        org_edge = F.conv2d(org_lum, self.laplacian, padding=1)
+        return torch.mean((enh_edge - org_edge) ** 2)
