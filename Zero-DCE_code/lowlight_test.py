@@ -27,7 +27,10 @@ IMG_EXTS = {'.jpg', '.jpeg', '.png', '.bmp'}
 
 
 def load_frame(path, device, size=None):
-	img = Image.open(path).convert('RGB')
+	try:
+		img = Image.open(path).convert('RGB')
+	except Exception:
+		return None
 	if size is not None:
 		img = img.resize(size, Image.LANCZOS)
 	t = torch.from_numpy(np.asarray(img, dtype=np.float32) / 255.0)
@@ -50,12 +53,22 @@ def enhance_sequence(frame_paths, out_dir, net, device):
 	with torch.no_grad():
 		for start in range(0, len(frames), CLIP_LEN):
 			clip_paths = frames[start:start + CLIP_LEN]
-			clip = torch.stack([load_frame(p, device, size=ref_size) for p in clip_paths], dim=1)  # (3, T, H, W)
+			loaded = [load_frame(p, device, size=ref_size) for p in clip_paths]
+			if any(t is None for t in loaded):
+				print(f"  Skipping clip at {start} — unreadable frame")
+				continue
+			clip = torch.stack(loaded, dim=1)  # (3, T, H, W)
 			clip = clip.unsqueeze(0)  # (1, 3, T, H, W)
 
 			t0 = time.time()
 			_, enhanced, _ = net(clip)
 			elapsed = time.time() - t0
+
+			# Adaptive blend: dark clips get full enhancement, bright clips get none.
+			# input_lum in [0,1]; blend=1 when lum≤0.25, blend=0 when lum≥0.55.
+			input_lum = clip.mean()
+			blend = ((0.55 - input_lum) / 0.30).clamp(0.0, 1.0)
+			enhanced = blend * enhanced + (1.0 - blend) * clip
 
 			# Save only real frames (not padding)
 			real = len(clip_paths) - (pad if start + CLIP_LEN >= len(frames) else 0)
@@ -79,7 +92,7 @@ if __name__ == '__main__':
 	for subdir in sorted(test_root.iterdir()):
 		if not subdir.is_dir():
 			continue
-		frame_paths = sorted(p for p in subdir.rglob('*') if p.suffix.lower() in IMG_EXTS)
+		frame_paths = sorted(p for p in subdir.rglob('*') if p.suffix.lower() in IMG_EXTS and p.is_file())
 		if not frame_paths:
 			continue
 		print(f"\nProcessing {subdir.name}  ({len(frame_paths)} frames)")

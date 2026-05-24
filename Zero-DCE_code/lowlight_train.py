@@ -35,7 +35,7 @@ def train(config):
 
 	L_color      = Myloss.L_color()
 	L_spa        = Myloss.L_spa()
-	L_exp        = Myloss.L_exp(16, 0.5)   # 0.5 = mid-gray, optimal for detection
+	L_exp        = Myloss.L_exp(16, 0.6)
 	L_TV         = Myloss.L_TV()
 	L_temporal   = Myloss.L_temporal()
 	L_sharp      = Myloss.L_sharp()
@@ -63,13 +63,13 @@ def train(config):
 			loss = (200 * L_TV(r_2d)
 				+       torch.mean(L_spa(enh_2d, clip_2d))
 				+ 5   * torch.mean(L_color(enh_2d))
-				+ 15  * torch.mean(L_exp(enh_2d))        # drives toward 0.5 mid-gray
+				+ 10  * torch.mean(L_exp(enh_2d))
 				+ 20  * L_temporal(enhanced)
-				+ 10  * L_sharp(enh_2d, clip_2d)         # crisp edges for detection
-				+ 8   * L_contrast(enh_2d)               # object separation
+				+ 8   * L_sharp(enh_2d, clip_2d)
+				+ 4   * L_contrast(enh_2d)
 				+ 10  * L_msssim(enh_2d, clip_2d)
-				+ 10  * L_edge(enh_2d, clip_2d)          # edge fidelity for detection
-				+ 25  * L_highlight(enh_2d))              # hard cap on overexposure
+				+ 6   * L_edge(enh_2d, clip_2d)
+				+ 20  * L_highlight(enh_2d))              # only fires if output is too bright
 
 			optimizer.zero_grad()
 			loss.backward()

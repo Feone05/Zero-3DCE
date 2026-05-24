@@ -60,19 +60,17 @@ class Zero3DCE(nn.Module):
 		self.attn    = SpatialAttention()       # applied after deepest encoder layer
 		self.e_conv5 = SepConv3d(nf*2, nf)
 		self.e_conv6 = SepConv3d(nf*2, nf)
-		# 8 iterations × 18 params (9 shadow + 9 highlight) = 144 output channels
-		self.e_conv7 = SepConv3d(nf*2, 144)
+		# 8 iterations × 9 cross-channel curve params = 72 output channels
+		self.e_conv7 = SepConv3d(nf*2, 72)
 
 	def apply_3d_curve(self, x, r):
-		# x: (B, 3, T, H, W)   r: (B, 18, T, H, W) — shadow + highlight params
+		# x: (B, 3, T, H, W)   r: (B, 9, T, H, W) — 3×3 cross-channel matrix
+		# r is sigmoid → always positive; x*(1-x) is positive → delta always positive → always brightens
 		B, _, T, H, W = x.shape
-		r_s = r[:, :9].view(B, 3, 3, T, H, W)   # shadow coefficients
-		r_h = r[:, 9:].view(B, 3, 3, T, H, W)   # highlight coefficients
-		shadow_basis    = x * (1.0 - x) ** 2     # peaks at x≈0.33, lifts shadows
-		highlight_basis = (x ** 2) * (1.0 - x)   # peaks at x≈0.67, adjusts midtones/highlights
-		shadow_delta    = (r_s * shadow_basis.unsqueeze(1)).sum(dim=2)
-		highlight_delta = (r_h * highlight_basis.unsqueeze(1)).sum(dim=2)
-		return x + shadow_delta + highlight_delta
+		r = r.view(B, 3, 3, T, H, W)
+		quadratic = x * (1.0 - x)                       # positive for x in (0,1), matches paper
+		delta = (r * quadratic.unsqueeze(1)).sum(dim=2) / 3.0   # /3 keeps strength equivalent to per-channel
+		return (x + delta).clamp(0.0, 1.0)
 
 	def forward(self, x):
 		# x: (B, 3, T, H, W)
@@ -83,9 +81,9 @@ class Zero3DCE(nn.Module):
 		x4 = self.attn(x4)                             # spatial attention
 		x5 = self.relu(self.e_conv5(torch.cat([x3, x4], 1)))
 		x6 = self.relu(self.e_conv6(torch.cat([x2, x5], 1)))
-		x_r = torch.tanh(self.e_conv7(torch.cat([x1, x6], 1)))
+		x_r = torch.sigmoid(self.e_conv7(torch.cat([x1, x6], 1)))
 
-		r1,r2,r3,r4,r5,r6,r7,r8 = torch.split(x_r, 18, dim=1)
+		r1,r2,r3,r4,r5,r6,r7,r8 = torch.split(x_r, 9, dim=1)
 
 		x = self.apply_3d_curve(x, r1)
 		x = self.apply_3d_curve(x, r2)
