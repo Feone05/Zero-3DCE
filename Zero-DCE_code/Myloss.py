@@ -206,7 +206,7 @@ class L_highlight_preserve(nn.Module):
     Penalises the excess brightness to push the model to add shadows/depth back
     to objects — independent of how dark or bright the original was.
     """
-    def __init__(self, ceiling=0.92):
+    def __init__(self, ceiling=0.85):
         super(L_highlight_preserve, self).__init__()
         self.ceiling = ceiling
 
