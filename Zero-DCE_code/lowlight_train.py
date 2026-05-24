@@ -42,7 +42,6 @@ def train(config):
 	L_contrast   = Myloss.L_contrast()
 	L_msssim     = Myloss.L_MSSSIM()
 	L_edge       = Myloss.L_edge()
-	L_shadow     = Myloss.L_shadow()
 	L_highlight  = Myloss.L_highlight_preserve()
 
 	optimizer = torch.optim.Adam(net.parameters(), lr=config.lr, weight_decay=config.weight_decay)
@@ -70,8 +69,7 @@ def train(config):
 				+ 4   * L_contrast(enh_2d)
 				+ 10  * L_msssim(enh_2d, clip_2d)
 				+ 6   * L_edge(enh_2d, clip_2d)
-				+ 3   * L_shadow(enh_2d)                # gentle shadow lift only
-				+ 20  * L_highlight(enh_2d, clip_2d))   # strong overexposure guard
+				+ 20  * L_highlight(enh_2d))             # overexposure correction only
 
 			optimizer.zero_grad()
 			loss.backward()

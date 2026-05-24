@@ -199,41 +199,18 @@ class L_edge(nn.Module):
         return torch.mean((enh_edge - org_edge) ** 2)
 
 
-class L_shadow(nn.Module):
-    """
-    Shadow lifting loss.
-    Penalises dark pixels in the enhanced output that remain below a threshold,
-    encouraging the network to lift underexposed regions toward a target brightness.
-    """
-    def __init__(self, threshold=0.3, target=0.5):
-        super(L_shadow, self).__init__()
-        self.threshold = threshold
-        self.target    = target
-
-    def forward(self, enhanced):
-        # enhanced: (B, 3, H, W)
-        lum = enhanced.mean(dim=1, keepdim=True)
-        mask = (lum < self.threshold).float()
-        return torch.mean(mask * (self.target - lum) ** 2)
-
-
 class L_highlight_preserve(nn.Module):
     """
-    Highlight/overexposure protection loss.
-    When the enhanced output exceeds a brightness ceiling, penalises the excess
-    proportionally — encouraging the model to pull back and preserve object
-    shadow detail rather than blowing out bright regions.
+    Overexposure correction loss.
+    Only activates when the enhanced output itself is too bright (above ceiling).
+    Penalises the excess brightness to push the model to add shadows/depth back
+    to objects — independent of how dark or bright the original was.
     """
     def __init__(self, ceiling=0.92):
         super(L_highlight_preserve, self).__init__()
         self.ceiling = ceiling
 
-    def forward(self, enhanced, original):
-        # enhanced, original: (B, 3, H, W)
-        # Penalise any enhanced pixel that blows past the ceiling
-        overexposed = F.relu(enhanced - self.ceiling)
-        # Also penalise pulling bright original regions even brighter
-        org_lum = original.mean(dim=1, keepdim=True)
-        bright_mask = (org_lum > 0.75).float()
-        over_bright = bright_mask * F.relu(enhanced - original)
-        return torch.mean(overexposed) + 0.5 * torch.mean(over_bright)
+    def forward(self, enhanced):
+        # enhanced: (B, 3, H, W)
+        # Only fires when the enhanced output exceeds the ceiling
+        return torch.mean(F.relu(enhanced - self.ceiling))
