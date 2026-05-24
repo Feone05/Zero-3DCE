@@ -70,7 +70,7 @@ if __name__ == '__main__':
 	device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 	net = model.Zero3DCE().to(device)
-	net.load_state_dict(torch.load('snapshots/Epoch99_3dce_video.pth', map_location=device))
+	net.load_state_dict(torch.load('snapshots/Epoch99_3dce_sepconv.pth', map_location=device))
 	net.eval()
 
 	test_root = Path('data/test_data')
