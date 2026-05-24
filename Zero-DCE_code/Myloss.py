@@ -197,3 +197,38 @@ class L_edge(nn.Module):
         enh_edge = F.conv2d(enh_lum, self.laplacian, padding=1)
         org_edge = F.conv2d(org_lum, self.laplacian, padding=1)
         return torch.mean((enh_edge - org_edge) ** 2)
+
+
+class L_shadow(nn.Module):
+    """
+    Shadow lifting loss.
+    Penalises dark pixels in the enhanced output that remain below a threshold,
+    encouraging the network to lift underexposed regions toward a target brightness.
+    """
+    def __init__(self, threshold=0.3, target=0.5):
+        super(L_shadow, self).__init__()
+        self.threshold = threshold
+        self.target    = target
+
+    def forward(self, enhanced):
+        # enhanced: (B, 3, H, W)
+        lum = enhanced.mean(dim=1, keepdim=True)
+        mask = (lum < self.threshold).float()
+        return torch.mean(mask * (self.target - lum) ** 2)
+
+
+class L_highlight_preserve(nn.Module):
+    """
+    Highlight preservation loss.
+    Prevents already-bright regions from being clipped or over-exposed
+    during shadow lifting, maintaining tonal separation at the top end.
+    """
+    def __init__(self, threshold=0.85):
+        super(L_highlight_preserve, self).__init__()
+        self.threshold = threshold
+
+    def forward(self, enhanced, original):
+        # enhanced, original: (B, 3, H, W)
+        org_lum = original.mean(dim=1, keepdim=True)
+        mask = (org_lum > self.threshold).float()
+        return torch.mean(mask * F.relu(enhanced - original))

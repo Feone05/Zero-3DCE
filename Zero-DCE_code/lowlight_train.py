@@ -33,15 +33,17 @@ def train(config):
 		dataset, batch_size=config.train_batch_size,
 		shuffle=True, num_workers=config.num_workers, pin_memory=True)
 
-	L_color    = Myloss.L_color()
-	L_spa      = Myloss.L_spa()
-	L_exp      = Myloss.L_exp(16, 0.6)
-	L_TV       = Myloss.L_TV()
-	L_temporal = Myloss.L_temporal()
-	L_sharp    = Myloss.L_sharp()
-	L_contrast = Myloss.L_contrast()
-	L_msssim   = Myloss.L_MSSSIM()
-	L_edge     = Myloss.L_edge()
+	L_color      = Myloss.L_color()
+	L_spa        = Myloss.L_spa()
+	L_exp        = Myloss.L_exp(16, 0.6)
+	L_TV         = Myloss.L_TV()
+	L_temporal   = Myloss.L_temporal()
+	L_sharp      = Myloss.L_sharp()
+	L_contrast   = Myloss.L_contrast()
+	L_msssim     = Myloss.L_MSSSIM()
+	L_edge       = Myloss.L_edge()
+	L_shadow     = Myloss.L_shadow()
+	L_highlight  = Myloss.L_highlight_preserve()
 
 	optimizer = torch.optim.Adam(net.parameters(), lr=config.lr, weight_decay=config.weight_decay)
 	net.train()
@@ -66,8 +68,10 @@ def train(config):
 				+ 20  * L_temporal(enhanced)
 				+ 8   * L_sharp(enh_2d, clip_2d)
 				+ 4   * L_contrast(enh_2d)
-				+ 10  * L_msssim(enh_2d, clip_2d)      # structural preservation (MS-SSIM)
-				+ 6   * L_edge(enh_2d, clip_2d))        # edge fidelity (Laplacian)
+				+ 10  * L_msssim(enh_2d, clip_2d)
+				+ 6   * L_edge(enh_2d, clip_2d)
+				+ 15  * L_shadow(enh_2d)                # lift dark regions
+				+ 10  * L_highlight(enh_2d, clip_2d))   # protect bright regions
 
 			optimizer.zero_grad()
 			loss.backward()
