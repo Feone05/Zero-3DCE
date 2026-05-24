@@ -70,8 +70,8 @@ def train(config):
 				+ 4   * L_contrast(enh_2d)
 				+ 10  * L_msssim(enh_2d, clip_2d)
 				+ 6   * L_edge(enh_2d, clip_2d)
-				+ 15  * L_shadow(enh_2d)                # lift dark regions
-				+ 10  * L_highlight(enh_2d, clip_2d))   # protect bright regions
+				+ 3   * L_shadow(enh_2d)                # gentle shadow lift only
+				+ 20  * L_highlight(enh_2d, clip_2d))   # strong overexposure guard
 
 			optimizer.zero_grad()
 			loss.backward()

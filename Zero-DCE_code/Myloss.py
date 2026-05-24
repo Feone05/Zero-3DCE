@@ -219,16 +219,21 @@ class L_shadow(nn.Module):
 
 class L_highlight_preserve(nn.Module):
     """
-    Highlight preservation loss.
-    Prevents already-bright regions from being clipped or over-exposed
-    during shadow lifting, maintaining tonal separation at the top end.
+    Highlight/overexposure protection loss.
+    When the enhanced output exceeds a brightness ceiling, penalises the excess
+    proportionally — encouraging the model to pull back and preserve object
+    shadow detail rather than blowing out bright regions.
     """
-    def __init__(self, threshold=0.85):
+    def __init__(self, ceiling=0.92):
         super(L_highlight_preserve, self).__init__()
-        self.threshold = threshold
+        self.ceiling = ceiling
 
     def forward(self, enhanced, original):
         # enhanced, original: (B, 3, H, W)
+        # Penalise any enhanced pixel that blows past the ceiling
+        overexposed = F.relu(enhanced - self.ceiling)
+        # Also penalise pulling bright original regions even brighter
         org_lum = original.mean(dim=1, keepdim=True)
-        mask = (org_lum > self.threshold).float()
-        return torch.mean(mask * F.relu(enhanced - original))
+        bright_mask = (org_lum > 0.75).float()
+        over_bright = bright_mask * F.relu(enhanced - original)
+        return torch.mean(overexposed) + 0.5 * torch.mean(over_bright)
